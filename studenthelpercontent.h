@@ -25,6 +25,8 @@ public:
     File* findFileByName(const QString& name);
     const File* findFileByName(const QString& name) const;
 
+    int getFileId(const File *file_ptr);
+
     void saveSettings();
     void loadSettings();
 
