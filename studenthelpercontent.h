@@ -6,6 +6,8 @@
 
 #include "filetreeitem.h"
 
+static const QString ROOT_FOLDER_NAME = "Все разделы";
+
 
 class StudentHelperContent : public QObject
 {
@@ -22,8 +24,10 @@ public:
 //    QList<File*>* getFileListPtr();
 
     void addFile(File* filePtr, FolderItem* folderPtr = nullptr);
-    File* findFileByName(const QString& name);
-    const File* findFileByName(const QString& name) const;
+//    File* findFileByName(const QString& name);
+//    const File* findFileByName(const QString& name) const;
+
+    const File *findFileByUuid(const QString &uuid) const;
 
     void saveSettings();
     void loadSettings();
@@ -36,19 +40,21 @@ public:
     void setFileList(const QList<File *> &fileList);
     void setRootFolderPtr(FolderItem *rootFolderPtr);
 
-public slots:
+private slots:
     void onFileAdded(File *filePtr);
     void onFileRemoved(File *filePtr);
+    void onTreeContentEdited(bool isFolder);
 
 signals:
     void sendToPrint(File*);
+    void contentEdited();
 
 private:
     void writeFolderSettings(QSettings &settings, FolderItem *folderPtr);
     void readFolderSettings(QSettings &settings, FolderItem *folderPtr);
 
     QList<File*> _fileList;
-    FolderItem*  _rootFolderPtr;
+    FolderItem*  _rootFolderPtr = nullptr;
 };
 
 

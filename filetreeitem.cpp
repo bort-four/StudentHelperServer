@@ -1,25 +1,17 @@
 #include <QPixmap>
 #include <QFileInfo>
 #include <QDebug>
+#include <QDir>
 
 #include "filetreeitem.h"
 
 
 // //// Implementation of File
 
-File::File(QString fullFileName)
-    : _fullName(fullFileName), _pixMapPtr(nullptr), _linkCount(0)
+File::File(QString name, QString uuid)
+    : _name(name), _uuid(uuid)
 {
-    QFileInfo info(fullFileName);
-
-    if (info.exists() && info.isFile())
-        _pixMapPtr = new QPixmap(fullFileName);
-
-    int i = _fullName.size() - 1;
-    for (; i >= 0 && _fullName[i] != '\\' && _fullName[i] != '/'; --i);
-    _name = _fullName.mid(i + 1);
-
-    emit imageChanged();
+    _name = _name.split(QDir::separator()).last().split('.').first();
 }
 
 File::~File()
@@ -33,10 +25,6 @@ QString File::getName() const
     return _name;
 }
 
-QString File::getFullName() const
-{
-    return _fullName;
-}
 
 const QStringList *File::getTagListPtr() const
 {
@@ -118,6 +106,16 @@ void File::setLinkCount(int newCount)
     _linkCount = newCount;
 }
 
+QString File::getUuid() const
+{
+    return _uuid;
+}
+
+void File::setUuid(const QString &uuid)
+{
+    _uuid = uuid;
+}
+
 
 
 
@@ -141,11 +139,6 @@ FileItem *FileTreeItem::toFile()
 }
 
 
-/*
-QVariant FileTreeItem::getValue() const { return QVariant(); }
-
-bool FileTreeItem::setValue(QVariant) { return false; }
-*/
 
 QString FileTreeItem::getName() const { return objectName(); }
 
@@ -163,47 +156,6 @@ bool FileTreeItem::addChild(FileTreeItem *) { throw QString("Try to add child in
 bool FileTreeItem::removeChild(FileTreeItem *) { throw QString("Try to remove child from not a folder"); }
 
 
-/*
-void FileTreeItem::debbugOutput(int space)
-{
-    QString str;
-
-    for (int i = 0; i < space; i++)
-        str += "  ";
-
-    if (isFolder())
-        str += "[folder] ";
-
-    str += getName();
-
-    qDebug() << str;
-
-    for (int i = 0; i < getChildCount(); ++i)
-        getChild(i)->debbugOutput(space + 1);
-}
-*/
-
-/*
-FileTreeItem::SelectionState FileTreeItem::getSelectionState() const
-{
-    bool hasSelected = false;
-    bool hasNotSelected = false;
-
-    for (int chNum = 0; chNum < getChildCount(); ++chNum)
-    {
-        SelectionState state = getChild(chNum)->getSelectionState();
-
-        hasSelected     |= state != NOT_SELECTED;
-        hasNotSelected  |= state != SELECTED;
-    }
-
-    return (hasSelected && hasNotSelected) ? PARTIALLY_SELECTED
-                                           : (hasSelected) ? SELECTED
-                                                           : NOT_SELECTED;
-}
-*/
-
-
 
 // //// Implementation of FolderItem
 
@@ -214,17 +166,16 @@ FolderItem::FolderItem(QString name, QObject *parPtr) : FileTreeItem(parPtr)
 
     if (dynamic_cast<FileTreeItem*>(parPtr) != NULL)
         dynamic_cast<FileTreeItem*>(parPtr)->addChild(this);
+
+    connect(this,   SIGNAL(nameChanged(QString)),
+            this,   SLOT(onNameChanged(QString)));
+
+//    connect(this,   SIGNAL(structureChanged()),
+//            this,   SIGNAL(contentEdited()));
 }
 
 FolderItem::~FolderItem()
 {
-    /*
-    foreach (FileItem *filePtr, _files)
-        delete filePtr;
-
-    foreach (FolderItem *folderPtr, _folders)
-        delete folderPtr;
-    */
 }
 
 bool FolderItem::isFolder() const { return true; }
@@ -279,6 +230,9 @@ bool FolderItem::addChild(FileTreeItem *childPtr)
 
         connect(folderPtr,  SIGNAL(fileRemoved(File*)),
                 this,       SIGNAL(fileRemoved(File*)), Qt::QueuedConnection);
+
+        connect(folderPtr,  SIGNAL(contentEdited(bool)),
+                this,       SIGNAL(contentEdited(bool)));
     }
     else if (childPtr->isFile())
     {
@@ -291,18 +245,18 @@ bool FolderItem::addChild(FileTreeItem *childPtr)
 
     childPtr->setParent(this);
 
-    /*
-    connect(childPtr,   SIGNAL(selectionStateCnahged(FileTreeItem::SelectionState)),
-            this,       SIGNAL(selectionStateCnahged(FileTreeItem::SelectionState)));
-    */
-
     emit structureChanged();
+    emit contentEdited(childPtr->isFolder());
     return true;
 }
 
 bool FolderItem::removeChild(FileTreeItem *childPtr)
 {
-    return removeChildRecursive(childPtr);
+    bool childIsFolder = childPtr->isFolder();
+    bool result = removeChildRecursive(childPtr);
+
+    emit contentEdited(childIsFolder);
+    return result;
 }
 
 QString FolderItem::getName() const
@@ -346,7 +300,7 @@ bool FolderItem::removeChildRecursive(FileTreeItem *childPtr)
     if (childPtr->isFolder() && _folders.indexOf(childPtr->toFolder()) == -1)
         return false;
 
-    if (childPtr->isFile() && _files.indexOf(childPtr->toFile()) == 1)
+    if (childPtr->isFile() && _files.indexOf(childPtr->toFile()) == -1)
         return false;
 
 //    childPtr->setParent(NULL);
@@ -381,6 +335,11 @@ bool FolderItem::removeChildRecursive(FileTreeItem *childPtr)
 const QList<FileItem *> &FolderItem::getFiles() const
 {
     return _files;
+}
+
+void FolderItem::onNameChanged(QString)
+{
+    emit contentEdited(true);
 }
 
 const QList<FolderItem *> &FolderItem::getFolders() const

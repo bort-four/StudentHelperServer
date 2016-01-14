@@ -17,39 +17,30 @@ SHQueryBase *SHQueryBase::fromQByteArray(const QByteArray &array)
 {
     SHQueryType type = (SHQueryType)array[0];
 
+    SHQueryBase *queryPtr = nullptr;
+
     switch (type)
     {
-        case SHQueryBase::SHQ_TEXT:
-        {
-            SHQText *queryPtr = new SHQText("");
-            queryPtr->readQByteArray(array);
-
-            return queryPtr;
-        }
-        case SHQueryBase::SHQ_CONTENT:
-        {
-            SHQContent *queryPtr = new SHQContent();
-            queryPtr->readQByteArray(array);
-            return queryPtr;
-        }
-        case SHQueryBase::SHQ_IMAGE_REQUEST:
-        {
-            SHQImageRequest *queryPtr = new SHQImageRequest();
-            queryPtr->readQByteArray(array);
-            return queryPtr;
-        }
-        case SHQueryBase::SHQ_IMAGE:
-        {
-            SHQImage *queryPtr = new SHQImage();
-            queryPtr->readQByteArray(array);
-            return queryPtr;
-        }
-        case SHQueryBase::SHQ_NULL:
-        default:
-            throw SHException(QString("SHQueryBase::fromQByteArray(): "
-                                      "unknown query type %1").arg(type));
-
+    case SHQueryBase::SHQ_TEXT:
+        queryPtr = new SHQText("");
+        break;
+    case SHQueryBase::SHQ_CONTENT:
+        queryPtr = new SHQContent();
+        break;
+    case SHQueryBase::SHQ_IMAGE_REQUEST:
+        queryPtr = new SHQImageRequest();
+        break;
+    case SHQueryBase::SHQ_IMAGE:
+        queryPtr = new SHQImage();
+        break;
+    case SHQueryBase::SHQ_NULL:
+    default:
+        throw SHException(QString("SHQueryBase::fromQByteArray(): "
+                                  "unknown query type %1").arg(type));
     }
+
+    queryPtr->readQByteArray(array);
+    return queryPtr;
 }
 
 
@@ -202,10 +193,6 @@ QByteArray SHQContent::toQByteArray() const
         throw SHException("SHQContent::toQByteArray(): "
                           "root folder pointer is null");
 
-//    if (_fileListPtr == nullptr)
-//        throw SHException("SHQContent::toQByteArray(): "
-//                          "file list pointer is null");
-
     // write file list
     stream << (quint64)getFileList().size();
 
@@ -213,6 +200,7 @@ QByteArray SHQContent::toQByteArray() const
     {
         stream << filePtr->getName();
         stream << filePtr->getTagString();
+        stream << filePtr->getUuid();
     }
 
     // write file tree
@@ -240,10 +228,10 @@ void SHQContent::readQByteArray(const QByteArray &array)
 
     for (quint64 fileNum = 0; fileNum < fileCt; ++fileNum)
     {
-        QString fileName, tagString;
-        stream >> fileName >> tagString;
+        QString fileName, tagString, uuid;
+        stream >> fileName >> tagString >> uuid;
 
-        File* filePtr = new File(fileName);
+        File* filePtr = new File(fileName, uuid);
         filePtr->inputTagsFromString(tagString);
         _fileList.append(filePtr);
     }
@@ -465,7 +453,7 @@ QByteArray &FrameReader::getCurrFrame()
 }
 
 
-const QTcpSocket *FrameReader::getSocketPtr() const
+QTcpSocket *FrameReader::getSocketPtr()
 {
     return _socketPtr;
 }

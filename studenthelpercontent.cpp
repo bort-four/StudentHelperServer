@@ -9,27 +9,19 @@
 // //// Inplementation of StudentHelperContent
 
 StudentHelperContent::StudentHelperContent(QObject *parPtr)
-    : QObject(parPtr), _rootFolderPtr(new FolderItem("root folder"))
+try
+    : QObject(parPtr)
 {
-    connect(_rootFolderPtr, SIGNAL(fileAdded(File*)),
-            this,           SLOT(onFileAdded(File*)));
-
-    connect(_rootFolderPtr, SIGNAL(fileRemoved(File*)),
-            this,           SLOT(onFileRemoved(File*)), Qt::QueuedConnection);
-
-    try
-    {
-//        loadSettings();
-    }
-    catch (SHException exc)
-    {
-        qDebug() << exc.getMsg();
-    }
-    catch (QString str)
-    {
-        qDebug() << str;
-    }
-
+    setFileList(QList<File *>());
+    setRootFolderPtr(new FolderItem(ROOT_FOLDER_NAME));
+}
+catch (SHException exc)
+{
+    qDebug() << exc.getMsg();
+}
+catch (QString str)
+{
+    qDebug() << str;
 }
 
 
@@ -63,21 +55,10 @@ void StudentHelperContent::addFile(File *filePtr, FolderItem *folderPtr)
         _rootFolderPtr->addChild(new FileItem(filePtr));
 }
 
-
-File* StudentHelperContent::findFileByName(const QString& name)
+const File *StudentHelperContent::findFileByUuid(const QString &uuid) const
 {
-    for (auto filePtr : getFileList())
-        if (filePtr->getFullName() == name)
-            return filePtr;
-
-    return nullptr;
-}
-
-
-const File* StudentHelperContent::findFileByName(const QString& name) const
-{
-    for (auto filePtr : getFileList())
-        if (filePtr->getFullName() == name)
+    for (auto filePtr : _fileList)
+        if (filePtr->getUuid() == uuid)
             return filePtr;
 
     return nullptr;
@@ -86,7 +67,7 @@ const File* StudentHelperContent::findFileByName(const QString& name) const
 
 void StudentHelperContent::saveSettings()
 {
-    QSettings settings("MMCS","StudentHelper");
+    QSettings settings("MMCS","StudentHelperServer");
     settings.clear();
 
     settings.setValue("globalFileListCount", _fileList.size());
@@ -95,8 +76,9 @@ void StudentHelperContent::saveSettings()
     for (int i = 0; i < _fileList.size(); ++i)
     {
         settings.setArrayIndex(i);
-        settings.setValue("fullName", _fileList[i]->getFullName());
+        settings.setValue("fullName", _fileList[i]->getName());
         settings.setValue("tagString", _fileList[i]->getTagString());
+        settings.setValue("uuid", _fileList[i]->getUuid());
     }
 
     settings.endArray();
@@ -107,7 +89,7 @@ void StudentHelperContent::saveSettings()
 
 void StudentHelperContent::loadSettings()
 {
-    QSettings settings("MMCS","StudentHelper");
+    QSettings settings("MMCS","StudentHelperServer");
 
     int fileCount = settings.value("globalFileListCount", 0).toInt();
     _fileList.clear();
@@ -117,9 +99,10 @@ void StudentHelperContent::loadSettings()
     for (int i = 0; i < fileCount; ++i)
     {
         settings.setArrayIndex(i);
-        QString fileFullName = settings.value("fullName", "___").toString();
+        QString fileFullName = settings.value("fullName", "unnamed").toString();
         File *filePtr = new File(fileFullName);
         filePtr->inputTagsFromString(settings.value("tagString", "").toString());
+        filePtr->setUuid(settings.value("uuid", "").toString());
 
         _fileList.append(filePtr);
     }
@@ -214,12 +197,31 @@ void StudentHelperContent::readFolderSettings(QSettings &settings, FolderItem *f
 
 void StudentHelperContent::setRootFolderPtr(FolderItem *rootFolderPtr)
 {
+    if (_rootFolderPtr != nullptr)
+        delete _rootFolderPtr;
+
     _rootFolderPtr = rootFolderPtr;
+
+    connect(_rootFolderPtr, SIGNAL(fileAdded(File*)),
+            this,           SLOT(onFileAdded(File*)));
+
+    connect(_rootFolderPtr, SIGNAL(fileRemoved(File*)),
+            this,           SLOT(onFileRemoved(File*)), Qt::QueuedConnection);
+
+    connect(_rootFolderPtr, SIGNAL(contentEdited(bool)),
+            this,           SLOT(onTreeContentEdited(bool)));
 }
 
 void StudentHelperContent::setFileList(const QList<File *> &fileList)
 {
+    for (auto filePtr : _fileList)
+        delete filePtr;
+
     _fileList = fileList;
+
+    for (auto filePtr : _fileList)
+        connect(filePtr,    SIGNAL(tagsChenged()),
+                this,       SIGNAL(contentEdited()));
 }
 
 
@@ -240,7 +242,8 @@ void StudentHelperContent::debugOutput() const
     qDebug() << "Files:";
 
     for (auto filePtr : getFileList())
-        qDebug() << "    " << filePtr->getName() << "-" << filePtr->getTagString();
+        qDebug() << "    " << filePtr->getName() << "-" << filePtr->getTagString()
+                 << "-" << filePtr->getUuid();
 
     _rootFolderPtr->debugOutput();
 }
@@ -250,6 +253,8 @@ void StudentHelperContent::onFileAdded(File *filePtr)
 {
     if (_fileList.indexOf(filePtr) == -1)
         _fileList.append(filePtr);
+
+    emit contentEdited();
 }
 
 
@@ -259,4 +264,12 @@ void StudentHelperContent::onFileRemoved(File *filePtr)
 
     if (linksCount == 0)
         _fileList.removeAll(filePtr);
+
+    emit contentEdited();
+}
+
+void StudentHelperContent::onTreeContentEdited(bool isFolder)
+{
+    if (isFolder)
+        emit contentEdited();
 }

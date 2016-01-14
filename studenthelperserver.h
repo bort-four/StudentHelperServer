@@ -29,20 +29,28 @@ public:
     explicit StudentHelperServer(QObject *parent = 0);
     ~StudentHelperServer();
 
+    StudentHelperContent *getContentPtr() const;
+    void setContentPtr(StudentHelperContent *contentPtr);
+
 signals:
 private slots:
     void onNewConnection();
     void onSocketDisconnected();
-//    void onReadyRead();
+    //    void onReadyRead();
     void onFrameIsReady();
 
 private:
-    StudentHelperContent _content;
+    QString getFilePath(const File *filePtr) const;
+    void deleteGarbage() const;
+
+    StudentHelperContent *_contentPtr = nullptr;
     Client *getClientBySocketPtr(const QTcpSocket *socketPtr);
 
     QTcpServer _qserver;
     QList<Client *> _clientPtrs;
     size_t _newConnectionId = 0;
+
+    QString _folderPath;
 };
 
 #endif // STUDENTHELPERSERVER_H

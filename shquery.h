@@ -15,7 +15,7 @@ class FrameReader : public QObject
     Q_OBJECT
 
 public:
-    FrameReader(QTcpSocket *getSocketPtr = nullptr);
+    FrameReader(QTcpSocket *socketPtr = nullptr);
     FrameReader(const FrameReader &other);
     ~FrameReader();
 
@@ -25,7 +25,7 @@ public:
 
     void writeData(const QByteArray &data);
 
-    const QTcpSocket *getSocketPtr() const;
+    QTcpSocket *getSocketPtr();
     void setSocketPtr(QTcpSocket *getSocketPtr);
 
     void acceptData(const QByteArray &data);
@@ -69,7 +69,6 @@ protected:
 private:
     const qint8 _type;
 };
-
 
 
 class SHQImage : public SHQueryBase

@@ -14,11 +14,11 @@ class File : public QObject
     Q_OBJECT
 
 public:
-    File(QString fullFileName);
+    File(QString name, QString uuid = "");
     ~File();
 
     QString getName() const;
-    QString getFullName() const;
+//    QString getFullName() const;
     QString getTagString() const;
     const QStringList* getTagListPtr() const;
     const QStringList &getTags() const;
@@ -33,15 +33,18 @@ public:
     int getLinkCount() const;
     void setLinkCount(int newCount);
 
+    QString getUuid() const;
+    void setUuid(const QString &uuid);
+
 signals:
     void tagsChenged();
     void imageChanged();
 
 private:
-    QString _fullName, _name;
+    QString /*_fullName,*/ _name, _uuid;
     QStringList _tags;
     QPixmap* _pixMapPtr = nullptr;
-    int _linkCount;
+    int _linkCount = 0;
 };
 
 
@@ -110,8 +113,12 @@ public:
 signals:
     void nameChanged(QString);
     void structureChanged();
+    void contentEdited(bool isFolder);
     void fileAdded(File *);
     void fileRemoved(File *);
+
+private slots:
+    void onNameChanged(QString);
 
 private:
     bool removeChildRecursive(FileTreeItem* childPtr);
