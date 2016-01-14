@@ -65,6 +65,19 @@ const File *StudentHelperContent::findFileByUuid(const QString &uuid) const
 }
 
 
+int StudentHelperContent::getFileId(const File* file_ptr)
+{
+    for (int i = 0; i < _fileList.size(); ++i)
+    {
+        if (_fileList[i] == file_ptr)
+        {
+            return i;
+        }
+    }
+    return -1;
+}
+
+
 void StudentHelperContent::saveSettings()
 {
     QSettings settings("MMCS","StudentHelperServer");

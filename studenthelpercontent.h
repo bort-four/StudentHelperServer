@@ -29,6 +29,8 @@ public:
 
     const File *findFileByUuid(const QString &uuid) const;
 
+    int getFileId(const File *file_ptr);
+
     void saveSettings();
     void loadSettings();
 
