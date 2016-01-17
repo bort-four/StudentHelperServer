@@ -17,7 +17,7 @@ try
 
     StudentHelperContent *contentPtr = new StudentHelperContent();
     contentPtr->loadSettings();
-    contentPtr->debugOutput();
+//    contentPtr->debugOutput();
     setContentPtr(contentPtr);
 
     qDebug() << "Server started";
@@ -29,6 +29,26 @@ try
             this,       SLOT(onNewConnection()));
 
     deleteGarbage();
+
+    // add test images
+    if (_contentPtr->getFileList().size() == 0)
+    {
+        File *file1Ptr = new File("Laplas", "111");
+        File *file2Ptr = new File("PC", "222");
+
+        _contentPtr->addFile(file1Ptr);
+        _contentPtr->addFile(file2Ptr);
+
+        file1Ptr->setPixmap(new QPixmap(":/images/LaplasEq.jpg"));
+        file2Ptr->setPixmap(new QPixmap(":/images/PCArchitecture.jpg"));
+
+        file1Ptr->inputTagsFromString("Laplas, eq");
+        file2Ptr->inputTagsFromString("PC, Architecture");
+    }
+
+    _contentPtr->debugOutput();
+    qDebug() << "Server started";
+    qDebug() << "Wait for connections...";
 }
 catch (SHException exc)
 {
@@ -42,6 +62,7 @@ catch (QString str)
 
 StudentHelperServer::~StudentHelperServer()
 {
+    deleteGarbage();
 }
 
 

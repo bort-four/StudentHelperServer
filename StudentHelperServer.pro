@@ -4,7 +4,7 @@
 #
 #-------------------------------------------------
 
-QT       += core network gui printsupport
+QT       += core network gui printsupport sql
 #QT       += core gui
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
@@ -34,3 +34,6 @@ HEADERS += \
 
 SUBDIRS += \
     ../StudentHelperClient/StudentHelperClient.pro
+
+RESOURCES += \
+    images.qrc

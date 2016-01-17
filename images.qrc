@@ -1,0 +1,6 @@
+<RCC>
+    <qresource prefix="/images">
+        <file>LaplasEq.jpg</file>
+        <file>PCArchitecture.jpg</file>
+    </qresource>
+</RCC>
